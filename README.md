@@ -69,6 +69,14 @@ python3 -m http.server 8000
 
 ---
 
-## 📜 License
+---
 
-Distributed under the MIT License. See `LICENSE` for more information.
+## ⚖️ License & Intellectual Property
+
+**© 2026 Yadira Rosemary Romancelly. All Rights Reserved.**
+
+This software is released under a **Source-Available Non-Commercial License**. 
+
+* **Evaluation & Personal Use:** Free to inspect, download, test, and evaluate for educational, portfolio, and non-commercial research purposes.
+* **Commercial Restriction:** Any commercial use, redistribution, sublicensing, or integration into paid services/products without an explicit commercial license from the author is strictly prohibited.
+* **Commercial Licensing & Inquiries:** For enterprise deployment, custom integrations, or commercial license purchases, please contact Yadira Romancelly via GitHub or LinkedIn.
