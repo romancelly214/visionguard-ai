@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionGuard AI — Automated CV Dataset Quality & Outlier Detector</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#0f172a',
+                            900: '#090d16',
+                            950: '#05070c'
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            500_20: 'rgba(6, 182, 212, 0.2)'
+                        },
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #05070c;
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        /* Neon Glow Utility Effects */
+        .glow-cyan {
+            box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.4);
+        }
+        .glow-amber {
+            box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.4);
+        }
+        .glow-rose {
+            box-shadow: 0 0 20px -5px rgba(244, 63, 94, 0.4);
+        }
+        .border-glow-cyan {
+            border-color: rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+        
+        /* Grid background pattern */
+        .bg-grid-pattern {
+            background-size: 30px 30px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        .tab-btn.active {
+            color: #22d3ee;
+            border-bottom: 2px solid #22d3ee;
+            background-color: rgba(6, 182, 212, 0.08);
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col bg-grid-pattern">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20 font-bold">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold text-lg tracking-tight text-white">VisionGuard <span class="text-cyan-400">AI</span></span>
+                        <span class="px-2 py-0.5 text-xs font-mono font-medium bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-full">v2.4-PRO</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Automated CV Dataset Quality & Outlier Audit System</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div id="dataset-status-pill" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span id="active-dataset-name" class="font-semibold">Human Motion & Fitness Activity Suite</span>
+                </div>
+                <button id="run-audit-btn" onclick="startDatasetAudit()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-sm rounded-lg shadow-lg shadow-cyan-500/20 transition-all flex items-center space-x-2 cursor-pointer active:scale-95">
+                    <i data-lucide="play" class="w-4 h-4 fill-slate-950"></i>
+                    <span>Run Full Audit</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- 1. SUMMARY METRICS DASHBOARD -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Images -->
+            <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 relative overflow-hidden backdrop-blur-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Audited Images</span>
+                    <div class="p-2 rounded-lg bg-slate-800 text-cyan-400"><i data-lucide="images" class="w-5 h-5"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="metric-total-images" class="text-3xl font-extrabold text-white font-mono">3,800</span>
+                    <span class="text-xs text-slate-400 font-mono">100% annotated</span>
+                </div>
+                <div class="mt-2 text-xs text-slate-400">
+                    <span class="text-emerald-400 font-semibold">100%</span> parsed successfully
+                </div>
+            </div>
+
+            <!-- Dataset Quality Index Score -->
+            <div id="quality-score-card" class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 relative overflow-hidden backdrop-blur-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Quality Index (QSI)</span>
+                    <div id="score-icon-box" class="p-2 rounded-lg bg-amber-950 text-amber-400"><i data-lucide="gauge" class="w-5 h-5"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="metric-quality-score" class="text-3xl font-extrabold text-amber-400 font-mono">72.4<span class="text-lg text-slate-500">/100</span></span>
+                    <span id="score-delta" class="text-xs px-2 py-0.5 rounded bg-amber-950/80 text-amber-400 border border-amber-800 font-mono">-8.2 vs prev</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="mt-3 w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="metric-score-bar" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full transition-all duration-1000" style="width: 72.4%"></div>
+                </div>
+            </div>
+
+            <!-- Detected Defect Count -->
+            <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 relative overflow-hidden backdrop-blur-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Defect Flagged</span>
+                    <div class="p-2 rounded-lg bg-rose-950 text-rose-400"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="metric-defect-count" class="text-3xl font-extrabold text-rose-400 font-mono">482</span>
+                    <span id="metric-defect-pct" class="text-xs text-rose-400 font-mono">12.6% error rate</span>
+                </div>
+                <div class="mt-2 text-xs text-slate-400 flex justify-between font-mono">
+                    <span>Drift: <strong id="mini-drift-cnt" class="text-slate-200">184</strong></span>
+                    <span>Blur: <strong id="mini-blur-cnt" class="text-slate-200">142</strong></span>
+                    <span>Outliers: <strong id="mini-outlier-cnt" class="text-slate-200">156</strong></span>
+                </div>
+            </div>
+
+            <!-- Health Status Banner -->
+            <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 relative overflow-hidden backdrop-blur-sm hover:border-slate-700 transition">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Dataset Health</span>
+                    <div id="health-icon" class="p-2 rounded-lg bg-amber-950 text-amber-400"><i data-lucide="activity" class="w-5 h-5"></i></div>
+                </div>
+                <div class="mt-3">
+                    <span id="metric-health-status" class="text-2xl font-bold text-amber-400 uppercase tracking-wide">Action Required</span>
+                </div>
+                <p id="health-description" class="mt-2 text-xs text-slate-400">
+                    High bounding box drift detected in movement classes. Retrain blocked until cleaned.
+                </p>
+            </div>
+        </section>
+
+        <!-- AUDIT PROGRESS OVERLAY / STEP LOGS (Hidden when idle, visible during audit) -->
+        <section id="audit-pipeline-container" class="hidden bg-slate-900 border border-cyan-800/80 rounded-xl p-5 glow-cyan transition-all">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></div>
+                    <h3 class="font-bold text-white text-base">Running Computer Vision Quality Audit Pipeline...</h3>
+                </div>
+                <span id="pipeline-percentage" class="font-mono text-cyan-400 font-bold text-lg">0%</span>
+            </div>
+            
+            <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden mb-4 p-0.5 border border-slate-800">
+                <div id="pipeline-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-2 font-mono text-xs text-slate-400">
+                <div id="pipe-step-1" class="p-2 rounded bg-slate-950 border border-slate-800 flex items-center space-x-2"><i data-lucide="file-json" class="w-3.5 h-3.5"></i><span>1. Parse COCO/VOC</span></div>
+                <div id="pipe-step-2" class="p-2 rounded bg-slate-950 border border-slate-800 flex items-center space-x-2"><i data-lucide="move" class="w-3.5 h-3.5"></i><span>2. BBox Drift & IoU</span></div>
+                <div id="pipe-step-3" class="p-2 rounded bg-slate-950 border border-slate-800 flex items-center space-x-2"><i data-lucide="aperture" class="w-3.5 h-3.5"></i><span>3. Laplacian Blur</span></div>
+                <div id="pipe-step-4" class="p-2 rounded bg-slate-950 border border-slate-800 flex items-center space-x-2"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i><span>4. Class Entropy</span></div>
+                <div id="pipe-step-5" class="p-2 rounded bg-slate-950 border border-slate-800 flex items-center space-x-2"><i data-lucide="cpu" class="w-3.5 h-3.5"></i><span>5. Embedding Outliers</span></div>
+            </div>
+        </section>
+
+        <!-- 2. DATASET INGESTION & THRESHOLD CONTROLS SECTION -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left 7 cols: Dataset Selection & Upload -->
+            <div class="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="database" class="w-5 h-5 text-cyan-400"></i>
+                            <h2 class="font-bold text-white text-base">Dataset Ingestion & Presets</h2>
+                        </div>
+                        <span class="text-xs text-slate-400">Select pre-built benchmark or drop annotations</span>
+                    </div>
+
+                    <!-- Dataset Selection Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                        <button onclick="selectPreset('fitness_suite')" id="preset-fitness_suite" class="preset-btn p-3 rounded-lg border text-left transition-all bg-cyan-950/40 border-cyan-500/60 text-slate-100">
+                            <div class="text-xs font-mono text-cyan-400 mb-1">Fitness Suite</div>
+                            <div class="font-bold text-xs truncate">Human Motion & Fitness Activity</div>
+                            <div class="text-[10px] text-slate-400 mt-1">3,800 images • COCO</div>
+                        </button>
+
+                        <button onclick="selectPreset('coco_traffic')" id="preset-coco_traffic" class="preset-btn p-3 rounded-lg border text-left transition-all bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300">
+                            <div class="text-xs font-mono text-slate-400 mb-1">Autonomous Driving</div>
+                            <div class="font-bold text-xs truncate">COCO Traffic & Pedestrian</div>
+                            <div class="text-[10px] text-slate-400 mt-1">2,450 images • COCO</div>
+                        </button>
+
+                        <button onclick="selectPreset('pascal_robotics')" id="preset-pascal_robotics" class="preset-btn p-3 rounded-lg border text-left transition-all bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300">
+                            <div class="text-xs font-mono text-slate-400 mb-1">Industrial Robotics</div>
+                            <div class="font-bold text-xs truncate">Bin Picking Suite</div>
+                            <div class="text-[10px] text-slate-400 mt-1">1,200 images • Pascal VOC</div>
+                        </button>
+                    </div>
+
+                    <!-- Custom Dropzone -->
+                    <div id="dropzone" class="border-2 border-dashed border-slate-800 hover:border-cyan-500/50 rounded-xl p-4 text-center transition-colors bg-slate-950/50 cursor-pointer" onclick="simulateFileUpload()">
+                        <input type="file" id="file-input" class="hidden" accept=".json,.xml,.zip" onchange="handleFileSelect(event)">
+                        <div class="flex flex-col items-center justify-center space-y-2">
+                            <div class="p-2 rounded-full bg-slate-900 text-cyan-400 border border-slate-800">
+                                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                            </div>
+                            <div class="text-xs text-slate-300 font-medium">
+                                <span class="text-cyan-400 font-semibold">Click to upload</span> or drag COCO JSON, Pascal VOC XMLs, or Images ZIP
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-mono">Supports: .json, .xml, .zip (Max 500MB)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dataset-meta-footer" class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
+                    <span>Format: <strong text-slate-200 class="text-slate-200" id="lbl-format">COCO Annotation Format</strong></span>
+                    <span>Classes: <strong text-slate-200 class="text-slate-200" id="lbl-classes">12 Unique Classes</strong></span>
+                </div>
+            </div>
+
+            <!-- Right 5 cols: Detection Sensitivity Threshold Controls -->
+            <div class="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-emerald-400"></i>
+                        <h2 class="font-bold text-white text-base">Audit Sensitivity Controls</h2>
+                    </div>
+                    <button onclick="resetThresholds()" class="text-xs text-slate-400 hover:text-cyan-400 transition flex items-center space-x-1">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i><span>Reset</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Slider 1: Blur Threshold -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-300">Motion Blur Variance (Laplacian)</span>
+                            <span id="val-blur" class="text-cyan-400 font-bold">110.0 var</span>
+                        </div>
+                        <input type="range" id="thresh-blur" min="50" max="300" value="110" oninput="updateThresholds()" class="w-full accent-cyan-400 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                            <span>More Lenient (50)</span>
+                            <span>Strict Blur Clean (300)</span>
+                        </div>
+                    </div>
+
+                    <!-- Slider 2: Bounding Box Drift Sensitivity -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-300">BBox Drift Sensitivity (px)</span>
+                            <span id="val-drift" class="text-cyan-400 font-bold">14 px</span>
+                        </div>
+                        <input type="range" id="thresh-drift" min="5" max="40" value="14" oninput="updateThresholds()" class="w-full accent-cyan-400 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                            <span>High Precision (5px)</span>
+                            <span>Loose Alignment (40px)</span>
+                        </div>
+                    </div>
+
+                    <!-- Slider 3: Class Imbalance Threshold Ratio -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-300">Class Imbalance Tolerance Ratio</span>
+                            <span id="val-imbalance" class="text-cyan-400 font-bold">4.5 : 1</span>
+                        </div>
+                        <input type="range" id="thresh-imbalance" min="2" max="10" step="0.5" value="4.5" oninput="updateThresholds()" class="w-full accent-cyan-400 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                            <span>Balanced Only (2:1)</span>
+                            <span>High Skew Allowed (10:1)</span>
+                        </div>
+                    </div>
+
+                    <!-- Slider 4: Outlier Distance Confidence -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-300">Embedding Anomaly Cutoff</span>
+                            <span id="val-outlier" class="text-cyan-400 font-bold">0.82 Confidence</span>
+                        </div>
+                        <input type="range" id="thresh-outlier" min="0.5" max="0.95" step="0.01" value="0.82" oninput="updateThresholds()" class="w-full accent-cyan-400 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. DETAILED FINDINGS TABS INTERFACE -->
+        <section class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden">
+            <!-- Tabs Navigation Bar -->
+            <div class="flex border-b border-slate-800 overflow-x-auto bg-slate-950/60 scrollbar-none">
+                <button onclick="switchTab('drift')" id="tab-btn-drift" class="tab-btn active px-5 py-3.5 text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-white transition whitespace-nowrap">
+                    <i data-lucide="scan" class="w-4 h-4"></i>
+                    <span>Bounding Box Drift & IoU</span>
+                    <span id="badge-drift-cnt" class="px-2 py-0.5 rounded-full text-[10px] bg-rose-950 text-rose-300 border border-rose-800 font-mono">184</span>
+                </button>
+
+                <button onclick="switchTab('blur')" id="tab-btn-blur" class="tab-btn px-5 py-3.5 text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-white transition whitespace-nowrap">
+                    <i data-lucide="aperture" class="w-4 h-4"></i>
+                    <span>Motion Blur Spectrum</span>
+                    <span id="badge-blur-cnt" class="px-2 py-0.5 rounded-full text-[10px] bg-amber-950 text-amber-300 border border-amber-800 font-mono">142</span>
+                </button>
+
+                <button onclick="switchTab('imbalance')" id="tab-btn-imbalance" class="tab-btn px-5 py-3.5 text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-white transition whitespace-nowrap">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                    <span>Class Distribution & Entropy</span>
+                    <span id="badge-entropy-score" class="px-2 py-0.5 rounded-full text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">H=1.84</span>
+                </button>
+
+                <button onclick="switchTab('outliers')" id="tab-btn-outliers" class="tab-btn px-5 py-3.5 text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-white transition whitespace-nowrap">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i><span>Visual Outliers & Misclassification</span>
+                    <span id="badge-outlier-cnt" class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">156</span>
+                </button>
+            </div>
+
+            <!-- TAB CONTENT CONTAINER -->
+            <div class="p-6">
+
+                <!-- TAB 1: BOUNDING BOX DRIFT & IoU ANALYSIS -->
+                <div id="tab-content-drift" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Canvas Visualizer -->
+                        <div class="lg:col-span-8 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center relative">
+                            <div class="w-full flex justify-between items-center mb-3">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-mono text-cyan-400 font-bold" id="drift-img-title">IMG_8892_SQUAT_FORM.JPG</span>
+                                    <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">1920x1080</span>
+                                </div>
+                                <div class="flex items-center space-x-4 text-xs font-mono">
+                                    <div class="flex items-center space-x-1">
+                                        <span class="w-3 h-3 rounded bg-rose-500 inline-block border border-rose-300"></span>
+                                        <span class="text-slate-300">Current Drifted Box</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <span class="w-3 h-3 rounded bg-emerald-500 inline-block border border-emerald-300"></span>
+                                        <span class="text-slate-300">AI Suggested Box</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive BBox Overlay Canvas -->
+                            <div class="relative w-full max-w-2xl aspect-video bg-slate-900 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center">
+                                <canvas id="bbox-canvas" class="w-full h-full object-contain cursor-crosshair"></canvas>
+                            </div>
+
+                            <div class="mt-3 w-full flex items-center justify-between text-xs text-slate-400 font-mono">
+                                <span>Intersection over Union (IoU): <strong id="canvas-iou-val" class="text-rose-400">0.58 (Low)</strong></span>
+                                <span>Drift Offset: <strong id="canvas-drift-px" class="text-amber-400">22.4 pixels</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: BBox Drift Queue -->
+                        <div class="lg:col-span-4 space-y-3">
+                            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                                <span>Flagged Drift Queue</span>
+                                <span class="text-slate-500 font-mono">Showing Top 5</span>
+                            </h3>
+
+                            <div id="drift-item-list" class="space-y-2">
+                                <!-- Dynamic List inserted via JS -->
+                            </div>
+
+                            <button onclick="autoFixAllDrift()" class="w-full py-2.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-300 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-2">
+                                <i data-lucide="wand2" class="w-4 h-4"></i>
+                                <span>Auto-Fix All Bounding Box Drifts</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: MOTION BLUR ANALYSIS -->
+                <div id="tab-content-blur" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Chart col -->
+                        <div class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-sm font-bold text-white">Laplacian Variance Blur Distribution</h3>
+                                    <p class="text-xs text-slate-400">Values below threshold (<span id="blur-chart-thresh-label" class="text-amber-400 font-mono">110.0</span>) are flagged as unacceptable motion blur</p>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="blurChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Blurred Images Grid -->
+                        <div class="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-white mb-3">Severe Motion Blur Samples</h3>
+                                <div id="blur-sample-grid" class="grid grid-cols-2 gap-3">
+                                    <!-- Dynamic Image Cards -->
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-lg text-xs text-amber-300">
+                                <div class="flex items-center space-x-2 font-bold mb-1">
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                    <span>Model Performance Risk</span>
+                                </div>
+                                High blur in fast-motion classes causes CNN feature degradation. Consider frame interpolation or drop images.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: CLASS IMBALANCE & ENTROPY -->
+                <div id="tab-content-imbalance" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Class Distribution Chart -->
+                        <div class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-bold text-white">Class Annotation Distribution</h3>
+                                <span class="text-xs font-mono text-cyan-400">Shannon Entropy: <strong id="entropy-value-display">1.84 / 2.48 max</strong></span>
+                            </div>
+                            <div class="h-72">
+                                <canvas id="classDistChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations & Class Breakdowns -->
+                        <div class="lg:col-span-5 space-y-4">
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                <h3 class="text-sm font-bold text-white mb-3">Class Skew Analysis</h3>
+                                <div id="class-skew-list" class="space-y-3 font-mono text-xs">
+                                    <!-- Dynamic class skew bars -->
+                                </div>
+                            </div>
+
+                            <div class="bg-cyan-950/30 border border-cyan-800/50 rounded-xl p-4 text-xs text-cyan-200">
+                                <div class="font-bold flex items-center space-x-2 mb-1 text-cyan-400">
+                                    <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                                    <span>Recommended Action</span>
+                                </div>
+                                <p id="imbalance-recommendation-text">
+                                    Class 'Pushup' is underrepresented by 7.2x relative to 'Squat'. Generate synthetic augmentations or sample additional frames.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: VISUAL OUTLIER & MISCLASSIFICATION INSPECTOR -->
+                <div id="tab-content-outliers" class="hidden space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Feature Embedding Outliers & Misclassification Matrix</h3>
+                            <p class="text-xs text-slate-400">Identified via distance in ResNet50 feature space & high classification entropy</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <span class="px-2.5 py-1 rounded bg-rose-950 border border-rose-800 text-rose-300 text-xs font-mono">High Anomaly (>0.85)</span>
+                            <span class="px-2.5 py-1 rounded bg-amber-950 border border-amber-800 text-amber-300 text-xs font-mono">Moderate (0.70 - 0.85)</span>
+                        </div>
+                    </div>
+
+                    <!-- Outliers Card Grid -->
+                    <div id="outliers-card-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Dynamic Outlier Cards -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 4. QUALITY REPORT GENERATOR & EXPORT SECTION -->
+        <section class="bg-slate-900/80 border border-slate-800 rounded-xl p-6 relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="file-check" class="w-5 h-5 text-emerald-400"></i>
+                        <h2 class="font-bold text-white text-base">Dataset Quality Executive Audit Report</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Export sanitized COCO annotations with defect flags or generate an executive PDF/HTML summary report.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <button onclick="exportAuditJSON()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono font-semibold transition flex items-center space-x-2">
+                        <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Export Audit Log (JSON)</span>
+                    </button>
+
+                    <button onclick="downloadCleanedAnnotations()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono font-semibold transition flex items-center space-x-2">
+                        <i data-lucide="code" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Cleaned COCO JSON</span>
+                    </button>
+
+                    <button onclick="generateExecutiveReport()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow-lg shadow-cyan-500/20 transition flex items-center space-x-2 cursor-pointer">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Print Executive Report</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 font-mono">
+            VisionGuard AI • Production Computer Vision Quality Assurance Engine • Built for Autonomous AI & Motion Intelligence
+        </div>
+    </footer>
+
+    <!-- DETAILED IMAGE INSPECTION MODAL -->
+    <div id="image-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh]">
+            <!-- Close button -->
+            <button onclick="closeModal()" class="absolute top-3 right-3 p-2 rounded-full bg-slate-800/80 text-slate-400 hover:text-white z-10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Image View area -->
+            <div class="md:w-3/5 bg-slate-950 p-4 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-800">
+                <img id="modal-img" src="" alt="Inspect Frame" class="max-h-[60vh] object-contain rounded-lg border border-slate-800">
+            </div>
+
+            <!-- Metadata & Action Panel -->
+            <div class="md:w-2/5 p-6 flex flex-col justify-between overflow-y-auto">
+                <div>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span id="modal-badge-type" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-rose-950 text-rose-300 border border-rose-800">Defect Detected</span>
+                        <span id="modal-filename" class="text-xs font-mono text-slate-400 truncate">IMG_00291.jpg</span>
+                    </div>
+
+                    <h3 id="modal-title" class="text-base font-bold text-white mb-4">Bounding Box Shift Detected</h3>
+
+                    <!-- Metrics Grid -->
+                    <div class="space-y-3 font-mono text-xs mb-6">
+                        <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between">
+                            <span class="text-slate-400">Class Label:</span>
+                            <span id="modal-class" class="text-cyan-400 font-bold">Squat_Form</span>
+                        </div>
+                        <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between">
+                            <span class="text-slate-400">Laplacian Blur Score:</span>
+                            <span id="modal-blur-val" class="text-amber-400 font-bold">84.2 var</span>
+                        </div>
+                        <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between">
+                            <span class="text-slate-400">Drift Offset:</span>
+                            <span id="modal-drift-val" class="text-rose-400 font-bold">24 px</span>
+                        </div>
+                        <div class="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between">
+                            <span class="text-slate-400">Embedding Distance:</span>
+                            <span id="modal-outlier-val" class="text-emerald-400 font-bold">0.89</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-2 pt-4 border-t border-slate-800">
+                    <button onclick="actionFixCurrentModal()" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition flex items-center justify-center space-x-2">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Apply Auto-Fix / Re-align</span>
+                    </button>
+                    <button onclick="actionFlagModal()" class="w-full py-2 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 font-bold text-xs rounded-lg transition flex items-center justify-center space-x-2">
+                        <i data-lucide="flag" class="w-4 h-4"></i>
+                        <span>Flag for Human Re-annotation</span>
+                    </button>
+                    <button onclick="actionExcludeModal()" class="w-full py-2 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs rounded-lg transition flex items-center justify-center space-x-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Exclude Image from Training Split</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // --- DATASET PRESETS MOCK DATA ---
+        const DATASET_PRESETS = {
+            fitness_suite: {
+                name: "Human Motion & Fitness Activity Suite",
+                totalImages: 3800,
+                format: "COCO Annotation Format",
+                classesCount: 12,
+                qualityScore: 72.4,
+                defects: { drift: 184, blur: 142, outliers: 156 },
+                health: "Action Required",
+                healthDesc: "High bounding box drift detected in fast movement classes (Jumping Jacks, Squats). Retrain blocked.",
+                classes: ['Squat', 'Pushup', 'Lunge', 'Plank', 'Jumping_Jack', 'Bicep_Curl'],
+                classCounts: [1250, 210, 890, 640, 510, 300],
+                driftItems: [
+                    { id: 'img_8892', name: 'IMG_8892_SQUAT_FORM.JPG', iou: 0.58, driftPx: 22.4, label: 'Squat', boxCurrent: [120, 80, 240, 310], boxSuggested: [135, 70, 230, 325] },
+                    { id: 'img_8893', name: 'IMG_8893_JUMP_JACK.JPG', iou: 0.61, driftPx: 19.8, label: 'Jumping_Jack', boxCurrent: [90, 50, 310, 420], boxSuggested: [100, 42, 295, 435] },
+                    { id: 'img_8894', name: 'IMG_8894_LUNGE_REP.JPG', iou: 0.54, driftPx: 26.1, label: 'Lunge', boxCurrent: [150, 110, 280, 290], boxSuggested: [162, 98, 270, 305] },
+                    { id: 'img_8895', name: 'IMG_8895_PUSHUP_LOW.JPG', iou: 0.63, driftPx: 17.5, label: 'Pushup', boxCurrent: [200, 180, 350, 140], boxSuggested: [210, 172, 340, 150] },
+                    { id: 'img_8896', name: 'IMG_8896_BICEP_CURL.JPG', iou: 0.67, driftPx: 15.2, label: 'Bicep_Curl', boxCurrent: [180, 90, 160, 280], boxSuggested: [188, 85, 150, 290] }
+                ],
+                blurData: [12, 24, 48, 142, 380, 890, 1120, 750, 434], // Histogram bins
+                outliers: [
+                    { id: 'out_1', name: 'FRAME_00412.JPG', score: 0.92, type: 'Lighting Extreme', class: 'Plank', img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop&q=60' },
+                    { id: 'out_2', name: 'FRAME_00891.JPG', score: 0.88, type: 'Occlusion', class: 'Squat', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&auto=format&fit=crop&q=60' },
+                    { id: 'out_3', name: 'FRAME_01204.JPG', score: 0.85, type: 'Inverted Pose', class: 'Pushup', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&auto=format&fit=crop&q=60' },
+                    { id: 'out_4', name: 'FRAME_01822.JPG', score: 0.79, type: 'Background Confusion', class: 'Lunge', img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400&auto=format&fit=crop&q=60' }
+                ]
+            },
+            coco_traffic: {
+                name: "COCO Traffic & Pedestrian Dataset",
+                totalImages: 2450,
+                format: "COCO JSON Format",
+                classesCount: 8,
+                qualityScore: 88.5,
+                defects: { drift: 62, blur: 45, outliers: 31 },
+                health: "Good",
+                healthDesc: "Dataset is well-balanced with minimal box drift. Ready for object detector training.",
+                classes: ['Car', 'Pedestrian', 'Bicycle', 'Bus', 'Traffic_Light', 'Truck'],
+                classCounts: [1100, 850, 240, 120, 310, 180],
+                driftItems: [
+                    { id: 'img_101', name: 'TRAFFIC_001.JPG', iou: 0.66, driftPx: 14.1, label: 'Car', boxCurrent: [100, 120, 200, 150], boxSuggested: [105, 115, 195, 158] },
+                    { id: 'img_102', name: 'PED_088.JPG', iou: 0.59, driftPx: 21.0, label: 'Pedestrian', boxCurrent: [220, 140, 60, 180], boxSuggested: [230, 132, 55, 190] }
+                ],
+                blurData: [2, 8, 15, 45, 210, 620, 950, 400, 200],
+                outliers: [
+                    { id: 'out_10', name: 'NIGHT_RAIN_04.JPG', score: 0.94, type: 'Glare / Rain', class: 'Car', img: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?w=400&auto=format&fit=crop&q=60' },
+                    { id: 'out_11', name: 'TUNNEL_002.JPG', score: 0.81, type: 'Low Light', class: 'Bus', img: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&auto=format&fit=crop&q=60' }
+                ]
+            },
+            pascal_robotics: {
+                name: "Robotics Bin Picking Dataset",
+                totalImages: 1200,
+                format: "Pascal VOC XML",
+                classesCount: 5,
+                qualityScore: 59.1,
+                defects: { drift: 210, blur: 180, outliers: 98 },
+                health: "Critical",
+                healthDesc: "Severe object overlap causing high label entropy and box drift in industrial bin environment.",
+                classes: ['Gear_A', 'Bolt_M8', 'Shaft', 'Bracket', 'Housing'],
+                classCounts: [600, 520, 80, 45, 30],
+                driftItems: [
+                    { id: 'img_201', name: 'BIN_PICK_0029.XML', iou: 0.42, driftPx: 34.2, label: 'Bolt_M8', boxCurrent: [80, 90, 110, 110], boxSuggested: [95, 80, 100, 125] }
+                ],
+                blurData: [40, 60, 80, 180, 310, 290, 140, 80, 20],
+                outliers: [
+                    { id: 'out_20', name: 'OVERLAP_BIN_9.JPG', score: 0.96, type: 'Extreme Occlusion', class: 'Shaft', img: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&auto=format&fit=crop&q=60' }
+                ]
+            }
+        };
+
+        // --- GLOBAL STATE ---
+        let currentDatasetKey = 'fitness_suite';
+        let currentDataset = DATASET_PRESETS.fitness_suite;
+        let selectedDriftItem = currentDataset.driftItems[0];
+        let modalActiveItem = null;
+
+        // Chart instances
+        let blurChartInstance = null;
+        let classDistChartInstance = null;
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            lucide.createIcons();
+            loadDatasetState(currentDatasetKey);
+            initCharts();
+            renderBBoxCanvas();
+        };
+
+        // --- DATASET PRESET SELECTION ---
+        function selectPreset(key) {
+            currentDatasetKey = key;
+            currentDataset = DATASET_PRESETS[key];
+
+            // Update UI buttons styling
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('bg-cyan-950/40', 'border-cyan-500/60', 'text-slate-100');
+                btn.classList.add('bg-slate-950', 'border-slate-800', 'text-slate-300');
+            });
+            const activeBtn = document.getElementById(`preset-${key}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-950', 'border-slate-800', 'text-slate-300');
+                activeBtn.classList.add('bg-cyan-950/40', 'border-cyan-500/60', 'text-slate-100');
+            }
+
+            loadDatasetState(key);
+        }
+
+        function loadDatasetState(key) {
+            const data = DATASET_PRESETS[key];
+            
+            // Header and metrics
+            document.getElementById('active-dataset-name').innerText = data.name;
+            document.getElementById('metric-total-images').innerText = data.totalImages.toLocaleString();
+            document.getElementById('metric-quality-score').innerHTML = `${data.qualityScore.toFixed(1)}<span class="text-lg text-slate-500">/100</span>`;
+            document.getElementById('metric-score-bar').style.width = `${data.qualityScore}%`;
+            
+            const totalDefects = data.defects.drift + data.defects.blur + data.defects.outliers;
+            document.getElementById('metric-defect-count').innerText = totalDefects;
+            document.getElementById('metric-defect-pct').innerText = `${((totalDefects / data.totalImages) * 100).toFixed(1)}% error rate`;
+
+            document.getElementById('mini-drift-cnt').innerText = data.defects.drift;
+            document.getElementById('mini-blur-cnt').innerText = data.defects.blur;
+            document.getElementById('mini-outlier-cnt').innerText = data.defects.outliers;
+
+            document.getElementById('badge-drift-cnt').innerText = data.defects.drift;
+            document.getElementById('badge-blur-cnt').innerText = data.defects.blur;
+            document.getElementById('badge-outlier-cnt').innerText = data.defects.outliers;
+
+            // Health Status
+            const healthElem = document.getElementById('metric-health-status');
+            const healthDesc = document.getElementById('health-description');
+            healthElem.innerText = data.health;
+            healthDesc.innerText = data.healthDesc;
+
+            if (data.health === 'Good') {
+                healthElem.className = 'text-2xl font-bold text-emerald-400 uppercase tracking-wide';
+            } else if (data.health === 'Action Required') {
+                healthElem.className = 'text-2xl font-bold text-amber-400 uppercase tracking-wide';
+            } else {
+                healthElem.className = 'text-2xl font-bold text-rose-400 uppercase tracking-wide';
+            }
+
+            // Annotation formats
+            document.getElementById('lbl-format').innerText = data.format;
+            document.getElementById('lbl-classes').innerText = `${data.classesCount} Unique Classes`;
+
+            // Populate Findings
+            selectedDriftItem = data.driftItems[0] || null;
+            renderDriftQueue();
+            renderBlurSamples();
+            renderOutliersGrid();
+            renderClassSkewList();
+            updateCharts();
+            renderBBoxCanvas();
+        }
+
+        // --- SIMULATED FILE UPLOAD ---
+        function simulateFileUpload() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                const fileName = files[0].name;
+                alert(`Uploaded '${fileName}'. Ingesting and building computer vision index graph...`);
+                // Simulate ingesting custom
+                DATASET_PRESETS['custom'] = {
+                    name: `Custom (${fileName})`,
+                    totalImages: 1450,
+                    format: fileName.endsWith('.xml') ? "Pascal VOC XML" : "COCO Annotation JSON",
+                    classesCount: 6,
+                    qualityScore: 81.2,
+                    defects: { drift: 42, blur: 30, outliers: 25 },
+                    health: "Good",
+                    healthDesc: "Custom dataset parsed successfully. Minor box alignment adjustments needed.",
+                    classes: ['Object_1', 'Object_2', 'Object_3'],
+                    classCounts: [700, 450, 300],
+                    driftItems: DATASET_PRESETS.fitness_suite.driftItems,
+                    blurData: [10, 20, 30, 40, 100, 300, 500, 300, 150],
+                    outliers: DATASET_PRESETS.fitness_suite.outliers
+                };
+                selectPreset('custom');
+            }
+        }
+
+        // --- ANIMATED AUDIT PIPELINE ---
+        function startDatasetAudit() {
+            const container = document.getElementById('audit-pipeline-container');
+            const progressBar = document.getElementById('pipeline-progress-bar');
+            const pctText = document.getElementById('pipeline-percentage');
+            const runBtn = document.getElementById('run-audit-btn');
+
+            container.classList.remove('hidden');
+            runBtn.disabled = true;
+            runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            let progress = 0;
+            const steps = [
+                { pct: 20, elem: 'pipe-step-1' },
+                { pct: 40, elem: 'pipe-step-2' },
+                { pct: 60, elem: 'pipe-step-3' },
+                { pct: 80, elem: 'pipe-step-4' },
+                { pct: 100, elem: 'pipe-step-5' }
+            ];
+
+            const interval = setInterval(() => {
+                progress += 5;
+                if (progress > 100) progress = 100;
+
+                progressBar.style.width = `${progress}%`;
+                pctText.innerText = `${progress}%`;
+
+                steps.forEach(s => {
+                    const el = document.getElementById(s.elem);
+                    if (progress >= s.pct) {
+                        el.classList.remove('bg-slate-950', 'border-slate-800');
+                        el.classList.add('bg-cyan-950', 'border-cyan-500', 'text-cyan-300');
+                    }
+                });
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        container.classList.add('hidden');
+                        runBtn.disabled = false;
+                        runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                        // Slightly improve quality score after audit fix recalculation simulation
+                        currentDataset.qualityScore = Math.min(98.5, currentDataset.qualityScore + 3.2);
+                        document.getElementById('metric-quality-score').innerHTML = `${currentDataset.qualityScore.toFixed(1)}<span class="text-lg text-slate-500">/100</span>`;
+                        document.getElementById('metric-score-bar').style.width = `${currentDataset.qualityScore}%`;
+                        
+                        // Pulse card
+                        document.getElementById('quality-score-card').classList.add('glow-cyan');
+                        setTimeout(() => document.getElementById('quality-score-card').classList.remove('glow-cyan'), 2000);
+                    }, 800);
+                }
+            }, 100);
+        }
+
+        // --- THRESHOLD SLIDERS INTERACTION ---
+        function updateThresholds() {
+            const blurVal = document.getElementById('thresh-blur').value;
+            const driftVal = document.getElementById('thresh-drift').value;
+            const imbalanceVal = document.getElementById('thresh-imbalance').value;
+            const outlierVal = document.getElementById('thresh-outlier').value;
+
+            document.getElementById('val-blur').innerText = `${blurVal}.0 var`;
+            document.getElementById('val-drift').innerText = `${driftVal} px`;
+            document.getElementById('val-imbalance').innerText = `${imbalanceVal} : 1`;
+            document.getElementById('val-outlier').innerText = `${outlierVal} Confidence`;
+
+            document.getElementById('blur-chart-thresh-label').innerText = `${blurVal}.0`;
+
+            // Dynamically recalculate defect flags based on stricter/looser thresholds
+            const extraBlur = Math.round((300 - blurVal) * 0.4);
+            const extraDrift = Math.round((40 - driftVal) * 3.5);
+            
+            document.getElementById('mini-blur-cnt').innerText = currentDataset.defects.blur + extraBlur;
+            document.getElementById('mini-drift-cnt').innerText = currentDataset.defects.drift + extraDrift;
+        }
+
+        function resetThresholds() {
+            document.getElementById('thresh-blur').value = 110;
+            document.getElementById('thresh-drift').value = 14;
+            document.getElementById('thresh-imbalance').value = 4.5;
+            document.getElementById('thresh-outlier').value = 0.82;
+            updateThresholds();
+        }
+
+        // --- TAB SWITCHING ---
+        function switchTab(tabKey) {
+            const tabs = ['drift', 'blur', 'imbalance', 'outliers'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+            });
+
+            document.getElementById(`tab-content-${tabKey}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabKey}`).classList.add('active');
+
+            if (tabKey === 'blur' && blurChartInstance) {
+                blurChartInstance.resize();
+            } else if (tabKey === 'imbalance' && classDistChartInstance) {
+                classDistChartInstance.resize();
+            } else if (tabKey === 'drift') {
+                renderBBoxCanvas();
+            }
+        }
+
+        // --- RENDERING CANVASES & DRAWINGS ---
+        function renderBBoxCanvas() {
+            const canvas = document.getElementById('bbox-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // Responsive scale
+            canvas.width = 640;
+            canvas.height = 360;
+
+            // Clear
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid backdrop
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            if (!selectedDriftItem) return;
+
+            document.getElementById('drift-img-title').innerText = selectedDriftItem.name;
+            document.getElementById('canvas-iou-val').innerText = `${selectedDriftItem.iou} (Low IoU Alignment)`;
+            document.getElementById('canvas-drift-px').innerText = `${selectedDriftItem.driftPx} pixels`;
+
+            // Draw mock silhouette figure inside canvas
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+            ctx.beginPath();
+            ctx.arc(280, 120, 25, 0, Math.PI * 2); // Head
+            ctx.fill();
+            ctx.fillRect(255, 145, 50, 100); // Body
+            ctx.fillRect(240, 245, 20, 70); // Leg L
+            ctx.fillRect(290, 245, 20, 70); // Leg R
+
+            // Draw Drifted Box (Rose / Red)
+            const bCurr = selectedDriftItem.boxCurrent;
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(bCurr[0], bCurr[1], bCurr[2], bCurr[3]);
+            
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillText(`DRIFTED BBOX [${selectedDriftItem.label}]`, bCurr[0], bCurr[1] - 6);
+
+            // Draw Suggested Box (Emerald / Green)
+            const bSugg = selectedDriftItem.boxSuggested;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([]);
+            ctx.strokeRect(bSugg[0], bSugg[1], bSugg[2], bSugg[3]);
+
+            ctx.fillStyle = '#10b981';
+            ctx.fillText(`GT CORRECTED (IoU 0.96)`, bSugg[0], bSugg[1] - 6);
+        }
+
+        // --- DRIFT QUEUE RENDERING ---
+        function renderDriftQueue() {
+            const container = document.getElementById('drift-item-list');
+            if (!container) return;
+
+            container.innerHTML = currentDataset.driftItems.map(item => `
+                <div onclick="selectDriftCard('${item.id}')" class="p-3 rounded-lg border transition cursor-pointer flex items-center justify-between ${selectedDriftItem && selectedDriftItem.id === item.id ? 'bg-cyan-950/60 border-cyan-500' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}">
+                    <div>
+                        <div class="text-xs font-mono font-bold text-slate-200">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">Label: <span class="text-cyan-400">${item.label}</span></div>
+                    </div>
+                    <div class="text-right font-mono">
+                        <div class="text-xs text-rose-400 font-bold">${item.driftPx}px drift</div>
+                        <div class="text-[10px] text-slate-500">IoU: ${item.iou}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectDriftCard(id) {
+            selectedDriftItem = currentDataset.driftItems.find(i => i.id === id);
+            renderDriftQueue();
+            renderBBoxCanvas();
+        }
+
+        function autoFixAllDrift() {
+            alert("Auto-fixing bounding box coordinates across entire dataset using predicted IoU anchor refinement...");
+            currentDataset.driftItems.forEach(item => {
+                item.boxCurrent = [...item.boxSuggested];
+                item.driftPx = 0.0;
+                item.iou = 0.98;
+            });
+            renderDriftQueue();
+            renderBBoxCanvas();
+        }
+
+        // --- RENDERING BLUR & OUTLIERS ---
+        function renderBlurSamples() {
+            const container = document.getElementById('blur-sample-grid');
+            if (!container) return;
+
+            const samples = [
+                { name: 'FRAME_102.JPG', var: '42.1 var', img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60' },
+                { name: 'FRAME_194.JPG', var: '68.4 var', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&auto=format&fit=crop&q=60' },
+                { name: 'FRAME_281.JPG', var: '79.2 var', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&auto=format&fit=crop&q=60' },
+                { name: 'FRAME_309.JPG', var: '88.0 var', img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&auto=format&fit=crop&q=60' }
+            ];
+
+            container.innerHTML = samples.map(s => `
+                <div onclick="openModal('${s.name}', 'Motion Blur Exception', '${s.var}', '18px', '0.74')" class="bg-slate-900 border border-slate-800 rounded-lg p-2 hover:border-amber-500/50 cursor-pointer transition">
+                    <img src="${s.img}" class="w-full h-24 object-cover rounded mb-2 border border-slate-800">
+                    <div class="text-[10px] font-mono text-slate-300 truncate">${s.name}</div>
+                    <div class="text-[10px] font-mono text-amber-400 font-bold">${s.var}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderOutliersGrid() {
+            const container = document.getElementById('outliers-card-grid');
+            if (!container) return;
+
+            container.innerHTML = currentDataset.outliers.map(o => `
+                <div onclick="openModal('${o.name}', '${o.type}', '92.1 var', '12px', '${o.score}')" class="bg-slate-950 border border-slate-800 rounded-xl p-3 hover:border-cyan-500/50 cursor-pointer transition flex flex-col justify-between">
+                    <div>
+                        <div class="relative mb-2">
+                            <img src="${o.img}" class="w-full h-32 object-cover rounded-lg border border-slate-800">
+                            <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950/90 text-rose-300 border border-rose-800">
+                                Score: ${o.score}
+                            </span>
+                        </div>
+                        <div class="text-xs font-mono font-bold text-white truncate">${o.name}</div>
+                        <div class="text-[10px] font-mono text-cyan-400 mt-0.5">Class: ${o.class}</div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                        <span>Type: ${o.type}</span>
+                        <i data-lucide="arrow-right-circle" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderClassSkewList() {
+            const container = document.getElementById('class-skew-list');
+            if (!container) return;
+
+            const max = Math.max(...currentDataset.classCounts);
+            container.innerHTML = currentDataset.classes.map((c, idx) => {
+                const count = currentDataset.classCounts[idx] || 100;
+                const pct = ((count / max) * 100).toFixed(0);
+                const isUnder = count < max * 0.25;
+
+                return `
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-slate-300">${c}</span>
+                            <span class="${isUnder ? 'text-rose-400 font-bold' : 'text-slate-400'}">${count} imgs ${isUnder ? '(Underrepresented)' : ''}</span>
+                        </div>
+                        <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                            <div class="${isUnder ? 'bg-rose-500' : 'bg-cyan-500'} h-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- CHART INSTANTIATIONS (Chart.js) ---
+        function initCharts() {
+            // 1. Blur Spectrum Histogram Chart
+            const ctxBlur = document.getElementById('blurChart').getContext('2d');
+            blurChartInstance = new Chart(ctxBlur, {
+                type: 'bar',
+                data: {
+                    labels: ['0-30', '30-60', '60-90', '90-120', '120-150', '150-180', '180-210', '210-240', '240+'],
+                    datasets: [{
+                        label: 'Image Count',
+                        data: currentDataset.blurData,
+                        backgroundColor: function(context) {
+                            const index = context.dataIndex;
+                            return index < 3 ? 'rgba(244, 63, 94, 0.7)' : 'rgba(6, 182, 212, 0.6)';
+                        },
+                        borderColor: function(context) {
+                            const index = context.dataIndex;
+                            return index < 3 ? '#f43f5e' : '#06b6d4';
+                        },
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                    }
+                }
+            });
+
+            // 2. Class Distribution Bar Chart
+            const ctxClass = document.getElementById('classDistChart').getContext('2d');
+            classDistChartInstance = new Chart(ctxClass, {
+                type: 'bar',
+                data: {
+                    labels: currentDataset.classes,
+                    datasets: [{
+                        label: 'Annotations',
+                        data: currentDataset.classCounts,
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        borderColor: '#10b981',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (blurChartInstance) {
+                blurChartInstance.data.datasets[0].data = currentDataset.blurData;
+                blurChartInstance.update();
+            }
+            if (classDistChartInstance) {
+                classDistChartInstance.data.labels = currentDataset.classes;
+                classDistChartInstance.data.datasets[0].data = currentDataset.classCounts;
+                classDistChartInstance.update();
+            }
+        }
+
+        // --- IMAGE INSPECTION MODAL ---
+        function openModal(filename, title, blurVal, driftVal, outlierVal) {
+            modalActiveItem = { filename, title, blurVal, driftVal, outlierVal };
+
+            document.getElementById('modal-filename').innerText = filename;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-blur-val').innerText = blurVal;
+            document.getElementById('modal-drift-val').innerText = driftVal;
+            document.getElementById('modal-outlier-val').innerText = outlierVal;
+            document.getElementById('modal-img').src = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80';
+
+            document.getElementById('image-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('image-modal').classList.add('hidden');
+        }
+
+        function actionFixCurrentModal() {
+            alert(`Auto-fix bounding box and sharpness enhancement applied to ${modalActiveItem.filename}.`);
+            closeModal();
+        }
+
+        function actionFlagModal() {
+            alert(`Image ${modalActiveItem.filename} flagged and queued for human re-annotation.`);
+            closeModal();
+        }
+
+        function actionExcludeModal() {
+            alert(`Image ${modalActiveItem.filename} excluded from train/val splits.`);
+            closeModal();
+        }
+
+        // --- REPORT GENERATION & EXPORTS ---
+        function exportAuditJSON() {
+            const auditData = {
+                timestamp: new Date().toISOString(),
+                dataset: currentDataset.name,
+                qualityScoreIndex: currentDataset.qualityScore,
+                healthStatus: currentDataset.health,
+                defectsFound: currentDataset.defects,
+                recommendations: [
+                    "Re-align bounding box drift in movement classes",
+                    "Synthesize augmentations for underrepresented classes"
+                ]
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `visionguard_audit_${currentDatasetKey}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function downloadCleanedAnnotations() {
+            alert(`Cleaning annotations... Dropped severe blur frames & adjusted drifted bounding boxes. Downloading sanitized COCO JSON file.`);
+        }
+
+        function generateExecutiveReport() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
